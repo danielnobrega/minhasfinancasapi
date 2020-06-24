@@ -3,6 +3,7 @@ package com.danielnobrega.minhasfinancas.service.impl;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.danielnobrega.minhasfinancas.enums.StatusLancamento;
+import com.danielnobrega.minhasfinancas.enums.TipoLancamento;
 import com.danielnobrega.minhasfinancas.exceptions.RegraNegocioException;
 import com.danielnobrega.minhasfinancas.model.entity.Lancamento;
 import com.danielnobrega.minhasfinancas.model.repository.LancamentoRepository;
@@ -29,6 +31,7 @@ public class LancamentoServiceImpl implements LancamentoService{
 	@Transactional 	
 	public Lancamento salvar(Lancamento lancamento) {
 		validar(lancamento);
+		lancamento.setStatus(StatusLancamento.PENDENTE);
 		return repository.save(lancamento);
 	}
 
@@ -37,7 +40,6 @@ public class LancamentoServiceImpl implements LancamentoService{
 	public Lancamento atualizar(Lancamento lancamento) {
 		Objects.requireNonNull(lancamento.getId());
 		validar(lancamento);
-		lancamento.setStatus(StatusLancamento.PENDENTE);
 		return repository.save(lancamento);
 	}
 
@@ -94,6 +96,27 @@ public class LancamentoServiceImpl implements LancamentoService{
 			throw new RegraNegocioException("Informe um TIPO de Lançamento");
 		}
 		
+	}
+
+	@Override
+	public Optional<Lancamento> obterPorId(Long id) {
+		return repository.findById(id);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public BigDecimal obterSaldoPorUsuario(Long id) {
+		BigDecimal receitas = repository.obterSaldoPorTipoLancamentoEUsuario(id, TipoLancamento.RECEITA.name());
+		BigDecimal despesas = repository.obterSaldoPorTipoLancamentoEUsuario(id, TipoLancamento.DESPESA.name());
+		
+		if (receitas == null) {
+			receitas = BigDecimal.ZERO;
+		}
+		
+		if (despesas == null) {
+			despesas = BigDecimal.ZERO;
+		}
+		return receitas.subtract(despesas);
 	}
 
 }
